@@ -3,11 +3,12 @@ const $ = id => document.getElementById(id);
 const KEY = 'dead-air-v2';
 const random = max => Math.floor(Math.random()*max);
 const defaultPattern = () => [[1,0,0,0,1,0,0,0],[0,0,1,0,0,0,1,0],[1,0,1,0,1,0,1,1]].map(row=>row.map(Boolean));
-const fresh = () => ({version:2,note:'',pattern:defaultPattern(),tempo:112,finds:[],legacy:null});
+const fresh = () => ({version:2,note:'',pattern:defaultPattern(),tempo:112,finds:[],legacy:null,artSeed:random(1000000)});
 function validate(data) {
   if (!data || data.version!==2 || typeof data.note!=='string' || data.note.length>20000 || !Array.isArray(data.pattern) || data.pattern.length!==3 || !data.pattern.every(row=>Array.isArray(row)&&row.length===8&&row.every(cell=>typeof cell==='boolean')) || !Number.isInteger(data.tempo)||data.tempo<60||data.tempo>180 || !Array.isArray(data.finds) || data.finds.length>100 || !data.finds.every(find=>find&&Number.isInteger(find.id)&&find.id>=0&&find.id<stations.length&&typeof find.time==='string'&&find.time.length<=50&&Number.isFinite(Date.parse(find.time))&&typeof find.frequency==='number'&&find.frequency>=88&&find.frequency<=108)) throw Error('Invalid backup');
+  if (data.artSeed!==undefined && (!Number.isInteger(data.artSeed)||data.artSeed<0||data.artSeed>999999)) throw Error('Invalid print seed');
   if (data.legacy!==null && data.legacy!==undefined) validateLegacy(data.legacy);
-  return {version:2,note:data.note,pattern:data.pattern.map(row=>[...row]),tempo:data.tempo,finds:data.finds.map(find=>({id:find.id,time:find.time,frequency:find.frequency})),legacy:data.legacy||null};
+  return {version:2,note:data.note,pattern:data.pattern.map(row=>[...row]),tempo:data.tempo,finds:data.finds.map(find=>({id:find.id,time:find.time,frequency:find.frequency})),legacy:data.legacy||null,artSeed:data.artSeed??random(1000000)};
 }
 function validateLegacy(data) {
   const date=/^\d{4}-\d{2}-\d{2}$/;
@@ -68,5 +69,27 @@ $('mutate').addEventListener('click',()=>{state.pattern=state.pattern.map((row,t
 $('clear-pattern').addEventListener('click',()=>{state.pattern=Array.from({length:3},()=>Array(8).fill(false));save();renderPattern();});
 $('export').addEventListener('click',()=>{const url=URL.createObjectURL(new Blob([JSON.stringify(state,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download=`dead-air-${new Date().toISOString().slice(0,10)}.json`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
 $('import-button').addEventListener('click',()=>$('import').click());
-$('import').addEventListener('change',async event=>{const file=event.target.files[0];if(!file)return;try{if(file.size>2000000)throw Error('Too large');const data=JSON.parse(await file.text());let incoming;if(data.version===1){const legacy=validateLegacy(data);incoming=fresh();incoming.legacy=legacy;incoming.note=legacy.note;}else incoming=validate(data);if(!confirm('Replace this browser’s current saves with this backup? Export first if you want to keep both.'))return;stopEngine();state=incoming;storageOK=true;const saved=save();$('note').value=state.note;renderPattern();renderArchive();scramble();$('save-status').textContent=saved?'BACKUP RESTORED':'NOT SAVED — EXPORT BEFORE LEAVING';$('data-status').textContent=saved?'Backup restored to local storage.':'Restored in memory only. Export before leaving.';toast('Records recovered.');}catch{$('data-status').textContent='Invalid backup. Current records were not changed.';}finally{event.target.value='';}});
+$('import').addEventListener('change',async event=>{const file=event.target.files[0];if(!file)return;try{if(file.size>2000000)throw Error('Too large');const data=JSON.parse(await file.text());let incoming;if(data.version===1){const legacy=validateLegacy(data);incoming=fresh();incoming.legacy=legacy;incoming.note=legacy.note;}else incoming=validate(data);if(!confirm('Replace this browser’s current saves with this backup? Export first if you want to keep both.'))return;stopEngine();state=incoming;storageOK=true;const saved=save();$('note').value=state.note;renderPattern();renderArchive();renderPrint();scramble();$('save-status').textContent=saved?'BACKUP RESTORED':'NOT SAVED — EXPORT BEFORE LEAVING';$('data-status').textContent=saved?'Backup restored to local storage.':'Restored in memory only. Export before leaving.';toast('Records recovered.');}catch{$('data-status').textContent='Invalid backup. Current records were not changed.';}finally{event.target.value='';}});
 renderArchive();renderPattern();scramble();if(!reduceMotion)frame=requestAnimationFrame(animate);
+
+function renderPrint(){
+ const canvas=$('print'),c=canvas.getContext('2d');if(!c)return;
+ let seed=state.artSeed+1;const next=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+ const palettes=[['#f1dfc4','#f2522e','#30285b','#b4d568'],['#d6e8e6','#304ed0','#fe9d3c','#fa6d9e'],['#27272d','#d7f94a','#ad88e1','#f5e7ca'],['#f0bfd2','#c52732','#275848','#ffce5b']];
+ const palette=palettes[Math.floor(next()*palettes.length)];
+ c.fillStyle=palette[0];c.fillRect(0,0,1200,800);
+ c.save();c.translate(600,400);c.rotate((next()-.5)*.8);
+ c.fillStyle=palette[1];c.fillRect(-750,-120,1500,240);
+ c.fillStyle=palette[2];const x=next()*500-250,y=next()*200-100;
+ c.beginPath();c.arc(x,y,170+next()*100,0,Math.PI*2);c.fill();
+ c.strokeStyle=palette[3];c.lineWidth=12;
+ for(let i=0;i<22;i++){c.beginPath();const baseline=-420+i*42;c.moveTo(-800,baseline);c.bezierCurveTo(-220,baseline+Math.sin(i*.22)*340,120,baseline-250,800,baseline+150);c.stroke();}
+ c.restore();c.fillStyle=palette[2];for(let i=0;i<7;i++){const a=next()*1100+50,b=next()*700+50;c.fillRect(a,b,8,8);}
+ c.strokeStyle=palette[2];c.lineWidth=2;c.strokeRect(30,30,1140,740);
+ c.fillStyle=palette[2];c.fillRect(45,712,280,40);c.fillStyle=palette[0];c.font='18px monospace';c.fillText('SIGNAL / '+String(state.artSeed).padStart(6,'0'),60,738);
+ $('print-label').textContent='COMPOSITION '+String(state.artSeed).padStart(6,'0')+' / 1200 × 800';
+}
+$('new-print').addEventListener('click',()=>{state.artSeed=random(1000000);renderPrint();$('print-status').textContent=save()?'Composition saved. It’ll be here next time.':'Browser storage unavailable. Download this image to keep it.';});
+$('download-print').addEventListener('click',()=>{$('print').toBlob(blob=>{if(!blob){toast('Image could not be exported.');return;}const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='signal-print-'+state.artSeed+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);},'image/png');});
+renderPrint();
+if(!save()) $('print-status').textContent='Browser storage unavailable. Download images and export notes to keep them.';
