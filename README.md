@@ -10,6 +10,10 @@ python3 -m http.server 8000 --bind 127.0.0.1
 
 GitHub Pages serves the repository root on `main`. Relative asset paths work under the repository subpath and custom domains.
 
+## Release 004
+
+A bootleg zine theme: paper texture, black/red/yellow contrast, pasted labels, heavy borders, and oversized headlines. The latest/ongoing structure and all existing save formats remain intact.
+
 ## Release 003
 
 **Signal Prints:** a seeded generative image toy. Make a new composition, return to it later, or download a 1200 × 800 PNG. Seeds persist and are included in backups. Version 2 backups from earlier releases remain compatible.
