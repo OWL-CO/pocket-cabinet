@@ -1,0 +1,37 @@
+const {chromium}=require('playwright');
+const assert=require('node:assert/strict');
+(async()=>{
+ const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
+ const context=await browser.newContext({viewport:{width:1440,height:1000}}),page=await context.newPage(),errors=[];
+ page.on('pageerror',e=>errors.push(e.message));
+ await context.route('**/*',route=>route.request().url().startsWith('http://127.0.0.1:8000')?route.continue():route.fulfill({status:200,body:'External navigation fixture'}));
+ await page.clock.install({time:new Date('2026-10-05T09:00:00Z')});
+ await page.goto('http://127.0.0.1:8000');
+ const first=await page.locator('#route-title').textContent();await page.locator('#drift-next').click();assert.notEqual(await page.locator('#route-title').textContent(),first);
+ await page.selectOption('#route-filter','tool');assert.equal(await page.locator('#route-category').textContent(),'USEFUL DETOUR');
+ const kept=await page.locator('#route-title').textContent();await page.locator('#bookmark').click();assert.equal(await page.locator('#bookmark').getAttribute('aria-pressed'),'true');
+ const popupPromise=page.waitForEvent('popup');await page.locator('#open-route').click();const popup=await popupPromise;assert.match(popup.url(),/^https:/);await popup.close();assert.match(await page.locator('#route-visited').textContent(),/OPENED/);
+ await page.locator('#inspect').click();assert.match(await page.locator('#packet').textContent(),/4c 49 4d 42 4f/);
+ await page.locator('#codec-input').fill('4c 49 4d 42 4f');await page.locator('#decode').click();assert.equal(await page.locator('#codec-output').textContent(),'LIMBO');
+ await page.locator('#access-word').fill('wrong');await page.locator('#unlock-form').evaluate(el=>el.requestSubmit());assert.equal(await page.locator('#secret').isVisible(),false);
+ await page.locator('#access-word').fill('limbo');await page.locator('#unlock-form').evaluate(el=>el.requestSubmit());assert.equal(await page.locator('#secret').isVisible(),true);
+ await page.locator('#codec-input').fill('xy');await page.locator('#decode').click();assert.match(await page.locator('#codec-output').textContent(),/Cannot convert/);
+ await page.selectOption('#codec-mode','encode');await page.locator('#codec-input').fill('東京');await page.locator('#decode').click();const encoded=await page.locator('#codec-output').textContent();await page.selectOption('#codec-mode','decode');await page.locator('#codec-input').fill(encoded);await page.locator('#decode').click();assert.equal(await page.locator('#codec-output').textContent(),'東京');
+ await page.locator('#task-input').fill('Remember the packet');await page.locator('#task-form').evaluate(el=>el.requestSubmit());await page.locator('#tasks input').check();assert.equal(await page.locator('#task-count').textContent(),'0 OPEN');
+ await page.getByRole('button',{name:'5 MIN',exact:true}).click();await page.locator('#timer-toggle').click();await page.clock.fastForward(65000);assert.equal(await page.locator('#timer-clock').textContent(),'03:55');await page.locator('#timer-toggle').click();await page.clock.fastForward(10000);assert.equal(await page.locator('#timer-clock').textContent(),'03:55');
+ await page.reload();assert.equal(await page.locator('#route-title').textContent(),kept);assert.equal(await page.locator('#bookmarks button').count(),1);assert.equal(await page.locator('#secret').isVisible(),true);assert.equal(await page.locator('#tasks input').isChecked(),true);assert.equal(await page.locator('#timer-clock').textContent(),'03:55');
+ await page.locator('#timer-toggle').click();await page.reload();assert.match(await page.locator('#timer-status').textContent(),/Running/);await page.clock.fastForward(240000);assert.equal(await page.locator('#timer-clock').textContent(),'00:00');assert.match(await page.locator('#timer-status').textContent(),/complete/);
+ const downloading=page.waitForEvent('download');await page.locator('#export').click();const download=await downloading,backup=await download.path();
+ await page.locator('#bookmarks button').click();await page.locator('#bookmark').click();await page.locator('#tasks button').click();assert.equal(await page.locator('#tasks li').count(),0);
+ page.on('dialog',d=>d.accept());await page.locator('#import').setInputFiles(backup);await page.waitForFunction(()=>document.querySelectorAll('#tasks li').length===1);assert.equal(await page.locator('#bookmarks button').count(),1);assert.equal(await page.locator('#secret').isVisible(),true);
+ await page.screenshot({path:'/tmp/relay-desktop.png',fullPage:true});
+ for(const width of [320,390,768]){await page.setViewportSize({width,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`overflow at ${width}`);}
+ await page.setViewportSize({width:390,height:844});await page.screenshot({path:'/tmp/relay-mobile.png',fullPage:true});assert.deepEqual(errors,[]);
+ console.log('PASS: discovery/filter/bookmarks and new-tab navigation; puzzle solve and persistence; UTF-8 decoder and invalid input; task completion/persistence/delete; timer pause/reload/completion; backup restores new records; 320/390/768px layout; no JS errors. External website content is not validated.');
+ const oldContext=await browser.newContext(),oldPage=await oldContext.newPage();
+ await oldPage.addInitScript(()=>{if(!localStorage.getItem('dead-air-v2'))localStorage.setItem('dead-air-v2',JSON.stringify({version:2,note:'v2 survivor',pattern:Array.from({length:3},()=>Array(8).fill(false)),tempo:112,finds:[],legacy:null,artSeed:12345}));});
+ await oldPage.goto('http://127.0.0.1:8000');assert.equal(await oldPage.locator('#note').inputValue(),'v2 survivor');assert.equal(await oldPage.locator('#timer-clock').textContent(),'25:00');assert.match(await oldPage.locator('#print-label').textContent(),/012345/);
+ const before=await oldPage.evaluate(()=>JSON.parse(localStorage.getItem('dead-air-v2')));const invalid={...before,hub:{...before.hub,tasks:[{text:5,done:false}]}};
+ await oldPage.locator('#import').setInputFiles({name:'bad-relay.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(invalid))});await oldPage.waitForFunction(()=>document.getElementById('data-status').textContent.startsWith('Invalid'));assert.equal(await oldPage.locator('#note').inputValue(),'v2 survivor');
+ console.log('PASS: older v2 backup migrates with default relay fields; invalid relay backup rejected; running timer survives reload.');await browser.close();
+})().catch(e=>{console.error(e);process.exit(1)});

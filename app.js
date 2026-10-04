@@ -3,12 +3,19 @@ const $ = id => document.getElementById(id);
 const KEY = 'dead-air-v2';
 const random = max => Math.floor(Math.random()*max);
 const defaultPattern = () => [[1,0,0,0,1,0,0,0],[0,0,1,0,0,0,1,0],[1,0,1,0,1,0,1,1]].map(row=>row.map(Boolean));
-const fresh = () => ({version:2,note:'',pattern:defaultPattern(),tempo:112,finds:[],legacy:null,artSeed:random(1000000)});
+const freshHub = () => ({current:0,bookmarks:[],seen:[],solved:false,tasks:[],timerEnd:null,timerRemaining:1500,timerDuration:1500});
+function validateHub(hub) {
+ if (hub===undefined) return freshHub();
+ const validIds = list => Array.isArray(list)&&list.length<=12&&list.every(id=>Number.isInteger(id)&&id>=0&&id<12);
+ if(!hub||!Number.isInteger(hub.current)||hub.current<0||hub.current>=12||!validIds(hub.bookmarks)||!validIds(hub.seen)||typeof hub.solved!=='boolean'||!Array.isArray(hub.tasks)||hub.tasks.length>100||!hub.tasks.every(task=>task&&typeof task.text==='string'&&task.text.length<=140&&typeof task.done==='boolean')||![300,1500].includes(hub.timerDuration)||!Number.isInteger(hub.timerRemaining)||hub.timerRemaining<0||hub.timerRemaining>1500||!(hub.timerEnd===null||(Number.isFinite(hub.timerEnd)&&hub.timerEnd>=0))) throw Error('Invalid relay records');
+ return {current:hub.current,bookmarks:[...new Set(hub.bookmarks)],seen:[...new Set(hub.seen)],solved:hub.solved,tasks:hub.tasks.map(task=>({text:task.text,done:task.done})),timerEnd:hub.timerEnd,timerRemaining:hub.timerRemaining,timerDuration:hub.timerDuration};
+}
+const fresh = () => ({version:2,note:'',pattern:defaultPattern(),tempo:112,finds:[],legacy:null,artSeed:random(1000000),hub:freshHub()});
 function validate(data) {
   if (!data || data.version!==2 || typeof data.note!=='string' || data.note.length>20000 || !Array.isArray(data.pattern) || data.pattern.length!==3 || !data.pattern.every(row=>Array.isArray(row)&&row.length===8&&row.every(cell=>typeof cell==='boolean')) || !Number.isInteger(data.tempo)||data.tempo<60||data.tempo>180 || !Array.isArray(data.finds) || data.finds.length>100 || !data.finds.every(find=>find&&Number.isInteger(find.id)&&find.id>=0&&find.id<stations.length&&typeof find.time==='string'&&find.time.length<=50&&Number.isFinite(Date.parse(find.time))&&typeof find.frequency==='number'&&find.frequency>=88&&find.frequency<=108)) throw Error('Invalid backup');
   if (data.artSeed!==undefined && (!Number.isInteger(data.artSeed)||data.artSeed<0||data.artSeed>999999)) throw Error('Invalid print seed');
   if (data.legacy!==null && data.legacy!==undefined) validateLegacy(data.legacy);
-  return {version:2,note:data.note,pattern:data.pattern.map(row=>[...row]),tempo:data.tempo,finds:data.finds.map(find=>({id:find.id,time:find.time,frequency:find.frequency})),legacy:data.legacy||null,artSeed:data.artSeed??random(1000000)};
+  return {version:2,note:data.note,pattern:data.pattern.map(row=>[...row]),tempo:data.tempo,finds:data.finds.map(find=>({id:find.id,time:find.time,frequency:find.frequency})),legacy:data.legacy||null,artSeed:data.artSeed??random(1000000),hub:validateHub(data.hub)};
 }
 function validateLegacy(data) {
   const date=/^\d{4}-\d{2}-\d{2}$/;
@@ -52,7 +59,7 @@ $('capture').addEventListener('click',()=>{const target=nearest();if(!target||la
 const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const ctx=$('scope').getContext('2d');let frame;
 function drawScope(time){if(!ctx)return;const w=850,h=310;ctx.fillStyle='#0b0f09';ctx.fillRect(0,0,w,h);ctx.strokeStyle='#27331e';ctx.lineWidth=1;for(let x=0;x<w;x+=42){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();}for(let y=0;y<h;y+=31){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}const intensity=lastStrength/100;ctx.strokeStyle=intensity>.89?'#ff713b':'#d5fc4b';ctx.lineWidth=2;ctx.beginPath();for(let x=0;x<w;x++){const noise=Math.sin(x*2.13+time*.008)*Math.cos(x*.76)*9*(1-intensity);const wave=Math.sin(x*.047+time*.002)*(15+intensity*85)*Math.sin(x*.006);const y=h/2+noise+wave;if(x===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();ctx.setLineDash([5,7]);ctx.strokeStyle='#768b4d';ctx.beginPath();ctx.moveTo(w/2,0);ctx.lineTo(w/2,h);ctx.stroke();ctx.setLineDash([]);}
-function animate(time){drawScope(time);if(!reduceMotion&&!document.hidden)frame=requestAnimationFrame(animate);}
+function animate(time){if(!$('experiments')||$('experiments').open)drawScope(time);if(!reduceMotion&&!document.hidden)frame=requestAnimationFrame(animate);}
 document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAnimationFrame(frame);stopEngine();}else if(!reduceMotion)frame=requestAnimationFrame(animate);});
 let audio=null,soundEnabled=false,playing=false,step=0,timer=null;
 async function enableAudio(){try{if(!audio)audio=new (window.AudioContext||window.webkitAudioContext)();await audio.resume();soundEnabled=true;$('sound').textContent='SOUND ON ↗';$('sound').setAttribute('aria-pressed','true');return true;}catch{$('audio-status').textContent='Audio unavailable in this browser. You can still edit patterns.';return false;}}
@@ -69,7 +76,7 @@ $('mutate').addEventListener('click',()=>{state.pattern=state.pattern.map((row,t
 $('clear-pattern').addEventListener('click',()=>{state.pattern=Array.from({length:3},()=>Array(8).fill(false));save();renderPattern();});
 $('export').addEventListener('click',()=>{const url=URL.createObjectURL(new Blob([JSON.stringify(state,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download=`dead-air-${new Date().toISOString().slice(0,10)}.json`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
 $('import-button').addEventListener('click',()=>$('import').click());
-$('import').addEventListener('change',async event=>{const file=event.target.files[0];if(!file)return;try{if(file.size>2000000)throw Error('Too large');const data=JSON.parse(await file.text());let incoming;if(data.version===1){const legacy=validateLegacy(data);incoming=fresh();incoming.legacy=legacy;incoming.note=legacy.note;}else incoming=validate(data);if(!confirm('Replace this browser’s current saves with this backup? Export first if you want to keep both.'))return;stopEngine();state=incoming;storageOK=true;const saved=save();$('note').value=state.note;renderPattern();renderArchive();renderPrint();scramble();$('save-status').textContent=saved?'BACKUP RESTORED':'NOT SAVED — EXPORT BEFORE LEAVING';$('data-status').textContent=saved?'Backup restored to local storage.':'Restored in memory only. Export before leaving.';toast('Records recovered.');}catch{$('data-status').textContent='Invalid backup. Current records were not changed.';}finally{event.target.value='';}});
+$('import').addEventListener('change',async event=>{const file=event.target.files[0];if(!file)return;try{if(file.size>2000000)throw Error('Too large');const data=JSON.parse(await file.text());let incoming;if(data.version===1){const legacy=validateLegacy(data);incoming=fresh();incoming.legacy=legacy;incoming.note=legacy.note;}else incoming=validate(data);if(!confirm('Replace this browser’s current saves with this backup? Export first if you want to keep both.'))return;stopEngine();state=incoming;storageOK=true;const saved=save();$('note').value=state.note;renderPattern();renderArchive();renderPrint();scramble();document.dispatchEvent(new Event('relay-restored'));$('save-status').textContent=saved?'BACKUP RESTORED':'NOT SAVED — EXPORT BEFORE LEAVING';$('data-status').textContent=saved?'Backup restored to local storage.':'Restored in memory only. Export before leaving.';toast('Records recovered.');}catch{$('data-status').textContent='Invalid backup. Current records were not changed.';}finally{event.target.value='';}});
 renderArchive();renderPattern();scramble();if(!reduceMotion)frame=requestAnimationFrame(animate);
 
 function renderPrint(){
