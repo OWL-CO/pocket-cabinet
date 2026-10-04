@@ -10,6 +10,12 @@ python3 -m http.server 8000 --bind 127.0.0.1
 
 GitHub Pages serves the repository root on `main`. Relative asset paths work under the repository subpath and custom domains.
 
+## Release 006 / Network Ghost
+
+An original industrial interface inspired by cinematic cyberpunk infrastructure: layered schematics, an isometric relay city, phosphor traces, and a dead-letter signal diagram. The topology is functional: twelve keyboard-accessible nodes preview discovery routes, show the selected connection, and indicate previously opened sites. Pin/open counts reflect local saves. On phones, nodes become a compact numbered grid. Trace and scan animations stop for reduced-motion preferences. The map is a schematic of the curated index, not a real-time network or location scan.
+
+All existing save formats and utilities remain compatible.
+
 ## Release 005 / Relay
 
 - **Drift Engine:** a handpicked index of twelve external sites. Filter strange corners, visual rabbit holes, or useful tools; shuffle to another route, open it in a new tab, or keep it for later. Unopened sites are prioritized and navigation is always user-initiated. External websites have their own privacy policies and availability; they are not embedded or fetched by this site.

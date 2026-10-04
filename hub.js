@@ -15,8 +15,27 @@ const routes = [
   {title:'Earth Nullschool',host:'earth.nullschool.net',url:'https://earth.nullschool.net/',category:'visual',description:'Watch wind curl around the planet. A global weather visualization worth getting lost in.'}
 ];
 const categoryNames={odd:'STRANGE CORNER',visual:'VISUAL RABBIT HOLE',tool:'USEFUL DETOUR'};
+const routePositions=[[140,88],[305,65],[485,75],[720,90],[805,194],[740,329],[590,366],[390,370],[212,322],[88,235],[280,195],[615,200]];
+routes.forEach((route,id)=>{
+ const button=document.createElement('button'),[x,y]=routePositions[id];
+ button.className='map-node';button.dataset.routeNode=id;button.textContent=String(id+1).padStart(2,'0');
+ button.setAttribute('aria-label',`Select route ${id+1}: ${route.title}`);button.setAttribute('aria-pressed','false');button.title=route.title;
+ button.style.setProperty('--node-x',`${x/9}%`);button.style.setProperty('--node-y',`${y/4.3}%`);
+ button.addEventListener('click',()=>{state.hub.current=id;$('route-filter').value='all';save();renderRoute();});
+ document.querySelector('.map-controls').append(button);
+});
+
 function renderRoute(){
  const route=routes[state.hub.current];
+ const [nodeX,nodeY]=routePositions[state.hub.current];
+ const elbow=nodeX>450?nodeX-30:nodeX+30;
+ $('selected-route-path').setAttribute('d',`M450 220H${elbow}V${nodeY}H${nodeX}`);
+ $('selected-route-ring').setAttribute('cx',nodeX);$('selected-route-ring').setAttribute('cy',nodeY);
+ document.querySelectorAll('[data-route-node]').forEach(button=>{const id=Number(button.dataset.routeNode);button.setAttribute('aria-pressed',String(id===state.hub.current));button.classList.toggle('visited',state.hub.seen.includes(id));});
+ $('map-node-id').textContent=String(state.hub.current+1).padStart(3,'0');
+ $('map-pinned').textContent=String(state.hub.bookmarks.length).padStart(2,'0');
+ $('map-opened').textContent=String(state.hub.seen.length).padStart(2,'0');
+
  $('route-title').textContent=route.title;$('route-description').textContent=route.description;
  $('route-host').textContent=route.host;$('route-category').textContent=categoryNames[route.category];
  $('route-id').textContent='COORDINATE '+String(state.hub.current+1).padStart(3,'0');
