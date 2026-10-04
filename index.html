@@ -1,1 +1,24 @@
-##I cooka da pizza
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f1eadc"><title>Pocket Cabinet · your daily little detour</title>
+<link rel="stylesheet" href="style.css"><script src="app.js" defer></script>
+</head>
+<body>
+<header><a class="brand" href="#">▦ POCKET CABINET</a><span class="edition" id="date"></span></header>
+<main>
+<section class="intro"><div><p class="eyebrow">A SMALL PLACE FOR GOOD LITTLE THINGS</p><h1>Make room<br>for a little <em>wonder.</em></h1><p class="subtitle">Open a drawer. Follow a whim. Leave something growing.<br>This corner of the internet is yours.</p></div><div class="hero-art" aria-hidden="true"><div class="sun">✳</div><div class="cabinet"><span>✦</span><span>☘</span><span>☾</span><span>♡</span></div><p>COLLECT MOMENTS, NOT TABS.</p></div></section>
+<div class="section-label"><span>YOUR DRAWERS</span><span>little rituals, lasting treasures</span></div>
+<section class="grid">
+<article class="card daily"><div class="card-top"><span>01 / THE DAILY DETOUR</span><span>↗</span></div><h2>A tiny adventure.</h2><p id="challenge"></p><button id="complete">I did the little thing <span>✓</span></button><p class="small" id="adventure-count" aria-live="polite"></p></article>
+<article class="card garden"><div class="card-top"><span>02 / WINDOWSILL</span><span>☘</span></div><h2>Something to grow.</h2><div id="plant" class="plant" aria-label="Your garden"></div><p id="garden-status"></p><button id="water">Give it a sip <span>♡</span></button><p class="small">One watering a day. A little patience goes a long way.</p></article>
+<article class="card mood"><div class="card-top"><span>03 / WEATHER INSIDE</span><span>◌</span></div><h2>How’s your sky?</h2><p>No fixing required. Just noticing.</p><div class="moods" role="group" aria-label="Today's mood"><button data-mood="sunny" aria-label="Sunny">☀</button><button data-mood="cloudy" aria-label="Cloudy">☁</button><button data-mood="rainy" aria-label="Rainy">☂</button><button data-mood="electric" aria-label="Electric">ϟ</button></div><p id="mood-status" class="small" aria-live="polite"></p><div id="mood-history" class="history"></div></article>
+<article class="card puzzle"><div class="card-top"><span>04 / BRAIN SNACK</span><span>✦</span></div><h2>A bite-sized riddle.</h2><p id="riddle"></p><button id="reveal">Peek at the answer <span>→</span></button><p id="answer" class="answer" hidden></p></article>
+<article class="card notes"><div class="card-top"><span>05 / THE KEEPING DRAWER</span><span>⌑</span></div><h2>Catch a passing thought.</h2><label for="note" class="small">Ideas, tiny victories, things worth keeping.</label><textarea id="note" placeholder="Today I noticed…" maxlength="20000"></textarea><span id="save-status" class="small" aria-live="polite">Saved only on this browser.</span></article>
+<article class="card play"><div class="card-top"><span>06 / ABSOLUTELY UNNECESSARY</span><span>✳</span></div><h2>Give yourself a title.</h2><p class="title-result" id="title-result" aria-live="polite">Distinguished Keeper<br>of Small Wonders</p><button id="shuffle">A new alter ego <span>⟳</span></button></article>
+</section>
+<section class="bottom"><div><p class="eyebrow">A CABINET THAT KEEPS YOU COMPANY</p><h3>Come back tomorrow.<br>There’s another little detour waiting.</h3><p>Daily prompts and riddles change at midnight in your local time.<br>Your garden, moods, and thoughts stay tucked away.</p></div><div class="data-controls"><button id="export">Export my keepsakes ↓</button><label class="import-button" for="import">Restore a backup ↑</label><input id="import" type="file" accept="application/json" hidden><p class="small">Stored on this browser, not an account.<br>Keep a backup before clearing browser data.</p><p id="data-status" class="small" role="status"></p></div></section>
+</main><footer><span>POCKET CABINET · EST. 2026</span><span>Made for wandering. Built for keeping. ✦</span></footer>
+<div id="toast" role="status" hidden></div>
+</body></html>
