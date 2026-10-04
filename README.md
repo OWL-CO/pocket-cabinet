@@ -1,32 +1,38 @@
-# Pocket Cabinet
+# DEAD AIR
 
-A personal corner of the internet for little adventures and lasting keepsakes.
+A personal pirate broadcast terminal. Static HTML/CSS/JavaScript; no build step, dependencies, external fonts, or external services.
 
-## Run locally
-
-Requires Python 3, with no package installation or build step:
+## Run
 
 ```sh
 python3 -m http.server 8000 --bind 127.0.0.1
 ```
 
-The site consists of `index.html`, `style.css`, and `app.js` and can be hosted by any static website host over HTTPS.
+GitHub Pages serves the repository root on `main`. Relative asset paths work under the repository subpath and custom domains.
 
-## Inside the cabinet
+## Transmission 002
 
-- A rotating daily adventure and riddle, selected by the visitor's local calendar date.
-- A windowsill plant that grows with one watering per day.
-- A daily mood tracker with a seven-entry history.
-- An automatically saved notebook.
-- A playful alter-ego generator.
-- JSON export and restore for saved keepsakes.
+- **Signal Hunter:** sweep 88–108 MHz, use signal strength to locate three hidden stations per sector, and intercept at 90% lock. Recovered transmissions persist in the archive. Scramble for another sector; previously undiscovered stories are prioritized.
+- **Noise Engine:** an eight-step kick/snare/hi-hat sequencer with synthesized Web Audio, adjustable tempo, mutation, and persistent patterns. Audio requires a user action. Mute stops playback; hiding the tab stops the engine.
+- **Black Box:** persistent notes, JSON export/restore, and migration from the original site's saves.
 
-Notes, moods, garden progress, and completed adventures use versioned browser local storage. Data belongs to the browser and site origin: it is not synced across devices, and moving to another domain will require exporting and restoring a backup. Clearing browser data removes saved keepsakes. Storage failures are reported and export remains available. Import validates the backup and asks before replacing current keepsakes.
+The waveform supports reduced-motion preferences. Controls support touch and keyboard; range inputs support arrow keys. No flashing effects or autoplay audio.
 
-The site does not have authentication. It makes no requests containing your saved data. Optional Google Fonts requests supply typography; system and Georgia fallbacks work without them.
+## Persistence
 
-Daily content rotates from a curated collection; it does not generate or publish new features automatically. Scheduled development, deployment, cross-device storage, and private access are future infrastructure work.
+`dead-air-v2` stores notes, patterns, tempo, recovered transmissions, and a preserved copy of legacy records. The original `pocket-cabinet-v1` key is never changed. Old notes migrate into the new editor. Old moods, garden waterings, and adventures remain available in exported backups. Both version 1 and version 2 backups can be imported; imports validate before asking to replace current data.
 
-## Validation
+Saves belong to the browser and origin, with no authentication or cross-device sync. Export before clearing browser data or changing domains. Storage failures are reported; in-memory data can still be exported.
 
-`node --check app.js` verifies JavaScript syntax. Browser smoke checks should exercise notes, watering, adventures, and moods across reloads, riddle reveal, title generation, backup export/restore, and mobile overflow. Test data should use a disposable browser context.
+## Checks
+
+```sh
+node --check app.js
+git diff --check
+```
+
+Browser smoke validation covers legacy migration, frequency capture, notes/patterns/tempo/archive across reloads, audio start/mute, backup restoration, invalid backup rejection, blocked storage, reduced motion, and 320/390/768px layouts. Use an isolated browser context so test data cannot affect personal saves.
+
+## Future updates
+
+An update means shipping an actual feature, experiment, or visual overhaul with release notes, while preserving existing saves. There is no automated daily development schedule connected yet. The site does not claim rotating content is a new release.

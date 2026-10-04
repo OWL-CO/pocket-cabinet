@@ -1,54 +1,72 @@
 'use strict';
-const KEY = 'pocket-cabinet-v1';
 const $ = id => document.getElementById(id);
-const localDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
-const fresh = () => ({version:1,note:'',moods:{},adventures:[],waterings:[]});
-const icons = {sunny:'☀',cloudy:'☁',rainy:'☂',electric:'ϟ'};
-function validate(value) {
-  const date = /^\d{4}-\d{2}-\d{2}$/;
-  if (!value || value.version !== 1 || typeof value.note !== 'string' || value.note.length > 20000 || !value.moods || typeof value.moods !== 'object' || Array.isArray(value.moods) || !Array.isArray(value.adventures) || !Array.isArray(value.waterings)) throw new Error('Invalid backup');
-  if (!Object.entries(value.moods).every(([key,mood]) => date.test(key) && Object.hasOwn(icons,mood)) || ![...value.adventures,...value.waterings].every(day => typeof day === 'string' && date.test(day))) throw new Error('Invalid backup');
-  return {version:1,note:value.note,moods:{...value.moods},adventures:[...new Set(value.adventures)],waterings:[...new Set(value.waterings)]};
+const KEY = 'dead-air-v2';
+const random = max => Math.floor(Math.random()*max);
+const defaultPattern = () => [[1,0,0,0,1,0,0,0],[0,0,1,0,0,0,1,0],[1,0,1,0,1,0,1,1]].map(row=>row.map(Boolean));
+const fresh = () => ({version:2,note:'',pattern:defaultPattern(),tempo:112,finds:[],legacy:null});
+function validate(data) {
+  if (!data || data.version!==2 || typeof data.note!=='string' || data.note.length>20000 || !Array.isArray(data.pattern) || data.pattern.length!==3 || !data.pattern.every(row=>Array.isArray(row)&&row.length===8&&row.every(cell=>typeof cell==='boolean')) || !Number.isInteger(data.tempo)||data.tempo<60||data.tempo>180 || !Array.isArray(data.finds) || data.finds.length>100 || !data.finds.every(find=>find&&Number.isInteger(find.id)&&find.id>=0&&find.id<stations.length&&typeof find.time==='string'&&find.time.length<=50&&Number.isFinite(Date.parse(find.time))&&typeof find.frequency==='number'&&find.frequency>=88&&find.frequency<=108)) throw Error('Invalid backup');
+  if (data.legacy!==null && data.legacy!==undefined) validateLegacy(data.legacy);
+  return {version:2,note:data.note,pattern:data.pattern.map(row=>[...row]),tempo:data.tempo,finds:data.finds.map(find=>({id:find.id,time:find.time,frequency:find.frequency})),legacy:data.legacy||null};
 }
-let state = fresh(), storageAvailable = true;
-try { const stored = localStorage.getItem(KEY); if (stored) state = validate(JSON.parse(stored)); } catch { storageAvailable = false; $('data-status').textContent = 'Saved data could not be loaded. Export any new keepsakes before leaving; existing data has not been overwritten.'; }
-function save() {
-  if (!storageAvailable) return false;
-  try { localStorage.setItem(KEY,JSON.stringify(state)); return true; } catch { storageAvailable=false; $('data-status').textContent='Browser storage is unavailable. Export your keepsakes to keep them.'; return false; }
+function validateLegacy(data) {
+  const date=/^\d{4}-\d{2}-\d{2}$/;
+  if (!data || data.version!==1 || typeof data.note!=='string'||data.note.length>20000||!data.moods||typeof data.moods!=='object'||Array.isArray(data.moods)||!Object.entries(data.moods).every(([key,val])=>date.test(key)&&['sunny','cloudy','rainy','electric'].includes(val))||!Array.isArray(data.adventures)||!Array.isArray(data.waterings)||![...data.adventures,...data.waterings].every(val=>typeof val==='string'&&date.test(val))) throw Error('Invalid legacy backup');
+  return {version:1,note:data.note,moods:{...data.moods},adventures:[...data.adventures],waterings:[...data.waterings]};
 }
-let toastTimer;
-function toast(message) { $('toast').textContent=message; $('toast').hidden=false; clearTimeout(toastTimer); toastTimer=setTimeout(()=>$('toast').hidden=true,3000); }
-const challenges = ['Find something the exact color of the sky. Give it a very official name.','Take a two-minute expedition somewhere you normally walk past. Notice three things.','Put on a song you loved years ago. Listen like it’s the first time.','Draw a tiny creature using only five lines. It deserves a name.','Send someone a specific, unexpected compliment. Small kindness, big ripple.','Make your next drink a ceremony. No scrolling for the first three sips.','Photograph a shadow. Imagine the creature that cast it.','Write a six-word story about your day. Dramatic exaggeration encouraged.','Find the oldest thing within arm’s reach. Wonder about its journey.','Spend a minute listening. Count how many different sounds you can hear.','Rearrange three small things on your desk. Call it an exhibition.','Look for a tiny sign of the season outside. Collect it in your memory.','Invent a new word for how you feel right now. Use it in a sentence.','Read a page of a book you’ve been meaning to open. Just one is enough.','Do one small favor for tomorrow-you. Then take a bow.'];
-const riddles = [['What gets wetter the more it dries?','A towel.'],['What has cities, but no houses; forests, but no trees; and water, but no fish?','A map.'],['What can you break without touching it?','A promise.'],['What has many keys but opens no locks?','A piano.'],['What has a neck but no head?','A bottle.'],['What travels around the world while staying in a corner?','A postage stamp.'],['What belongs to you, but other people use it more?','Your name.'],['What goes up but never comes down?','Your age.'],['What has hands but cannot clap?','A clock.'],['What can fill a room without taking up space?','Light.'],['What has one eye but cannot see?','A needle.'],['What has words but never speaks?','A book.'],['What has a head and a tail, but no body?','A coin.']];
-function dayNumber(day) { return Math.floor(Date.parse(day+'T00:00:00Z')/86400000); }
-let today;
-function render() {
-  const next = localDate(); if (today !== next) $('answer').hidden=true; today=next;
-  $('date').textContent=new Date().toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric',year:'numeric'}).toUpperCase();
-  $('challenge').textContent=challenges[dayNumber(today)%challenges.length];
-  const riddle=riddles[dayNumber(today)%riddles.length]; $('riddle').textContent=riddle[0]; $('answer').textContent=riddle[1];
-  const completed=state.adventures.includes(today); $('complete').disabled=completed; $('complete').textContent=completed?'Today’s detour: accomplished ✓':'I did the little thing ✓';
-  $('adventure-count').textContent=`${state.adventures.length} little adventure${state.adventures.length===1?'':'s'} collected.`;
-  const watered=state.waterings.includes(today), growth=state.waterings.length;
-  $('plant').textContent=growth<3?'🌱':growth<7?'🌿':growth<14?'🌷':'🌻';
-  $('garden-status').textContent=`${growth} day${growth===1?'':'s'} of care · ${growth<3?'a fresh beginning':growth<7?'putting down roots':growth<14?'coming into bloom':'a happy little sunflower'}`;
-  $('water').disabled=watered; $('water').textContent=watered?'All watered for today ✓':'Give it a sip ♡';
-  document.querySelectorAll('[data-mood]').forEach(button=>button.setAttribute('aria-pressed',String(state.moods[today]===button.dataset.mood)));
-  $('mood-status').textContent=state.moods[today]?`Today feels ${state.moods[today]}. You can change it anytime.`:'Pick the weather that feels like you.';
-  $('mood-history').replaceChildren();
-  Object.keys(state.moods).sort().slice(-7).forEach(day=>{const item=document.createElement('span'); item.textContent=icons[state.moods[day]]; item.title=`${day}: ${state.moods[day]}`; const caption=document.createElement('small');caption.textContent=day.slice(5);item.append(caption);$('mood-history').append(item);});
+const stations=[
+ ['THE LAST VENDING MACHINE','It sells weather from cities that no longer exist. You buy a can of rain. It is warm.'],
+ ['BONE ORCHESTRA','Every skeleton on the midnight train is tapping the same rhythm. None of them know who started it.'],
+ ['PIRATE CUSTOMER SERVICE','Thank you for holding. Your rebellion is important to us. You are caller number infinity.'],
+ ['GHOST IN THE LAUNDROMAT','A dryer keeps returning a coat nobody owns. Something in the pocket is breathing.'],
+ ['MOON ADVERTISEMENT','THIS SPACE FOR RENT. Excellent visibility. Terrible foot traffic. Contact the tides.'],
+ ['THE ELEVATOR CULT','Floor 13 doesn’t exist. Floor 14 won’t discuss it. The elevator has started wearing a tie.'],
+ ['FERAL WIFI','A router escaped the apartment. It lives under the bridge now, broadcasting passwords to pigeons.'],
+ ['ORACLE OF PARKING LOT B','The shopping cart predicts the future. So far: rain, a minor betrayal, and an excellent sandwich.'],
+ ['RADIO FOR THE UNBORN','A lullaby played backward. Somehow you remember every word.'],
+ ['THE MEATSPACE PATCH','Reality update failed. Trees may clip through buildings. Do not uninstall gravity.'],
+ ['OFFICE OF LOST TOMORROWS','Your missing Thursday has been found. It is in good condition, except for a small coffee stain.'],
+ ['THE UNDERGROUND SUN','Below the subway, someone is growing a star in a bucket. It needs feeding.']
+];
+let state=fresh(), storageOK=true;
+try {const existing=localStorage.getItem(KEY);if(existing) state=validate(JSON.parse(existing));else {const old=localStorage.getItem('pocket-cabinet-v1');if(old){state.legacy=validateLegacy(JSON.parse(old));state.note=state.legacy.note;}}} catch {storageOK=false;$('data-status').textContent='Saved data could not be read. Existing records are untouched. Export this session before leaving.';}
+function save(){if(!storageOK)return false;try{localStorage.setItem(KEY,JSON.stringify(state));return true;}catch{storageOK=false;$('data-status').textContent='Storage unavailable. Export this session before closing the tab.';return false;}}
+let toastTimer;function toast(message){$('toast').textContent=message;$('toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').hidden=true,4000);}
+$('date').textContent=new Date().toLocaleDateString(undefined,{month:'short',day:'2-digit',year:'numeric'}).toUpperCase();
+$('note').value=state.note;$('note').addEventListener('input',()=>{state.note=$('note').value;$('save-status').textContent=save()?'WRITTEN TO LOCAL MEMORY':'NOT SAVED — EXPORT BEFORE LEAVING';});
+function renderArchive(){
+ $('captures').textContent=String(state.finds.length).padStart(2,'0');$('archive-count').textContent=`${state.finds.length} FINDS`;
+ $('legacy-status').textContent=state.legacy?`${Object.keys(state.legacy.moods).length} mood entries, ${state.legacy.waterings.length} waterings, and ${state.legacy.adventures.length} adventures recovered.`:'No records from the old station found on this browser.';
+ if(!state.finds.length){$('artifacts').innerHTML='<p class="empty">[ NOTHING RECOVERED ]<br><span>Go fishing in the static above.</span></p>';return;}
+ $('artifacts').replaceChildren();state.finds.slice().reverse().forEach(find=>{const article=document.createElement('article');article.className='artifact';const meta=document.createElement('div');meta.className='artifact-meta';meta.textContent=`${find.frequency.toFixed(1)} MHz / ${new Date(find.time).toLocaleDateString()}`;const title=document.createElement('h4');title.textContent=stations[find.id][0];const text=document.createElement('p');text.textContent=stations[find.id][1];article.append(meta,title,text);$('artifacts').append(article);});
 }
-$('note').value=state.note;
-$('note').addEventListener('input',()=>{state.note=$('note').value;$('save-status').textContent=save()?'Tucked away. Saved on this browser.':'Not saved in browser — export a backup before leaving.';});
-$('complete').addEventListener('click',()=>{render();if (!state.adventures.includes(today)) {state.adventures.push(today);save();render();toast('A little adventure, collected. ✦');}});
-$('water').addEventListener('click',()=>{render();if (!state.waterings.includes(today)) {state.waterings.push(today);save();render();toast('Your windowsill says thank you. ♡');}});
-document.querySelectorAll('[data-mood]').forEach(button=>button.addEventListener('click',()=>{today=localDate();state.moods[today]=button.dataset.mood;save();render();}));
-$('reveal').addEventListener('click',()=>{$('answer').hidden=!$('answer').hidden;});
-const adjectives=['Honorary','Supreme','Secret','Accidental','Distinguished','Wandering','Extraordinary','Sleepy'];
-const roles=['Curator','Guardian','Inspector','Wizard','Ambassador','Collector','Captain','Connoisseur'];
-const things=['Excellent Snacks','Lost Socks','Unfinished Thoughts','Tiny Miracles','Suspicious Clouds','Cozy Corners','Unnecessary Side Quests','Very Good Pebbles'];
-const pick = list => list[Math.floor(Math.random()*list.length)];
-$('shuffle').addEventListener('click',()=>{$('title-result').textContent=`${pick(adjectives)} ${pick(roles)} of ${pick(things)}`;});
-$('export').addEventListener('click',()=>{const url=URL.createObjectURL(new Blob([JSON.stringify(state,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download=`pocket-cabinet-${localDate()}.json`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
-$('import').addEventListener('change',async event=>{const file=event.target.files[0];if (!file) return;try {if (file.size>2000000) throw new Error('Too large');const incoming=validate(JSON.parse(await file.text()));if (!confirm('Restore this backup? It will replace your current notes, garden, and mood history. Export your current keepsakes first if you want to keep them.')) return;state=incoming;storageAvailable=true;const saved=save();$('note').value=state.note;render();$('save-status').textContent=saved?'Backup restored and saved.':'Restored in memory only. Export before leaving.';toast(saved?'Your keepsakes are home.':'Restored, but browser storage is unavailable.');} catch {$('data-status').textContent='That file is not a valid Pocket Cabinet backup. Your current keepsakes are unchanged.';} finally {event.target.value='';}});
-render();setInterval(render,60000);document.addEventListener('visibilitychange',()=>{if (!document.hidden) render();});
+let targets=[], claimed=new Set(), sector=0, lastStrength=0;
+function scramble(){targets=[];claimed=new Set();const available=stations.map((_,id)=>id).filter(id=>!state.finds.some(find=>find.id===id));const pool=available.length?available:stations.map((_,id)=>id);for(let i=0;i<3;i++){const freq=89+i*6+random(40)/10;targets.push({frequency:freq,id:pool.splice(random(pool.length),1)[0]});if(!pool.length)pool.push(...stations.map((_,id)=>id).filter(id=>!targets.some(target=>target.id===id)));}sector++;$('coordinates').textContent=`SECTOR ${String(sector).padStart(2,'0')}`;updateSignal();}
+function nearest(){const frequency=Number($('dial').value);return targets.filter((_,index)=>!claimed.has(index)).map(target=>({...target,distance:Math.abs(target.frequency-frequency)})).sort((a,b)=>a.distance-b.distance)[0];}
+function updateSignal(){const target=nearest();lastStrength=target?Math.max(0,Math.round(100-target.distance*35)):0;$('frequency').textContent=Number($('dial').value).toFixed(1);$('strength').textContent=`${lastStrength}% LOCK`;$('capture').disabled=lastStrength<90;$('signal-status').textContent=!target?'Band cleared. Scramble for another sector.':lastStrength>=90?'TRANSMISSION LOCKED. Intercept now.':lastStrength>50?'Something is talking. You’re getting close.':'Sweep slowly. Something is hiding.';if(reduceMotion)drawScope(0);}
+$('dial').addEventListener('input',updateSignal);
+function nudge(amount){$('dial').value=(Number($('dial').value)+amount).toFixed(1);updateSignal();}
+$('down').addEventListener('click',()=>nudge(-.1));$('up').addEventListener('click',()=>nudge(.1));$('new-band').addEventListener('click',()=>{scramble();toast('New sector. Same questionable antenna.');});
+$('capture').addEventListener('click',()=>{const target=nearest();if(!target||lastStrength<90)return;claimed.add(targets.findIndex(t=>t.frequency===target.frequency));state.finds.push({id:target.id,frequency:target.frequency,time:new Date().toISOString()});state.finds=state.finds.slice(-100);save();renderArchive();updateSignal();toast(`RECOVERED: ${stations[target.id][0]}`);if(soundEnabled)tone(540,.15,.08);});
+const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const ctx=$('scope').getContext('2d');let frame;
+function drawScope(time){if(!ctx)return;const w=850,h=310;ctx.fillStyle='#0b0f09';ctx.fillRect(0,0,w,h);ctx.strokeStyle='#27331e';ctx.lineWidth=1;for(let x=0;x<w;x+=42){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();}for(let y=0;y<h;y+=31){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}const intensity=lastStrength/100;ctx.strokeStyle=intensity>.89?'#ff713b':'#d5fc4b';ctx.lineWidth=2;ctx.beginPath();for(let x=0;x<w;x++){const noise=Math.sin(x*2.13+time*.008)*Math.cos(x*.76)*9*(1-intensity);const wave=Math.sin(x*.047+time*.002)*(15+intensity*85)*Math.sin(x*.006);const y=h/2+noise+wave;if(x===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();ctx.setLineDash([5,7]);ctx.strokeStyle='#768b4d';ctx.beginPath();ctx.moveTo(w/2,0);ctx.lineTo(w/2,h);ctx.stroke();ctx.setLineDash([]);}
+function animate(time){drawScope(time);if(!reduceMotion&&!document.hidden)frame=requestAnimationFrame(animate);}
+document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAnimationFrame(frame);stopEngine();}else if(!reduceMotion)frame=requestAnimationFrame(animate);});
+let audio=null,soundEnabled=false,playing=false,step=0,timer=null;
+async function enableAudio(){try{if(!audio)audio=new (window.AudioContext||window.webkitAudioContext)();await audio.resume();soundEnabled=true;$('sound').textContent='SOUND ON ↗';$('sound').setAttribute('aria-pressed','true');return true;}catch{$('audio-status').textContent='Audio unavailable in this browser. You can still edit patterns.';return false;}}
+function tone(frequency,duration,volume,type='sine'){if(!audio||!soundEnabled)return;const osc=audio.createOscillator(),gain=audio.createGain();const now=audio.currentTime;osc.type=type;osc.frequency.setValueAtTime(frequency,now);gain.gain.setValueAtTime(volume,now);gain.gain.exponentialRampToValueAtTime(.001,now+duration);osc.connect(gain);gain.connect(audio.destination);osc.start(now);osc.stop(now+duration);osc.onended=()=>{osc.disconnect();gain.disconnect();};}
+function hit(track){if(!audio||!soundEnabled)return;if(track===0){const osc=audio.createOscillator(),gain=audio.createGain(),now=audio.currentTime;osc.frequency.setValueAtTime(140,now);osc.frequency.exponentialRampToValueAtTime(40,now+.15);gain.gain.setValueAtTime(.45,now);gain.gain.exponentialRampToValueAtTime(.001,now+.2);osc.connect(gain);gain.connect(audio.destination);osc.start(now);osc.stop(now+.21);osc.onended=()=>{osc.disconnect();gain.disconnect();};}else{const duration=track===1?.14:.045,buffer=audio.createBuffer(1,Math.ceil(audio.sampleRate*duration),audio.sampleRate);const samples=buffer.getChannelData(0);for(let i=0;i<samples.length;i++)samples[i]=Math.random()*2-1;const source=audio.createBufferSource(),filter=audio.createBiquadFilter(),gain=audio.createGain(),now=audio.currentTime;source.buffer=buffer;filter.type='highpass';filter.frequency.value=track===1?900:6500;gain.gain.setValueAtTime(track===1?.16:.09,now);gain.gain.exponentialRampToValueAtTime(.001,now+duration);source.connect(filter);filter.connect(gain);gain.connect(audio.destination);source.start();source.onended=()=>{source.disconnect();filter.disconnect();gain.disconnect();};}}
+function renderPattern(){$('sequencer').replaceChildren();['KICK','SNARE','HAT'].forEach((name,track)=>{const label=document.createElement('span');label.className='track-label';label.textContent=name;$('sequencer').append(label);for(let index=0;index<8;index++){const button=document.createElement('button');button.className='step';button.dataset.step=index;button.setAttribute('aria-label',`${name} step ${index+1}`);button.setAttribute('aria-pressed',String(state.pattern[track][index]));button.addEventListener('click',()=>{state.pattern[track][index]=!state.pattern[track][index];button.setAttribute('aria-pressed',String(state.pattern[track][index]));save();if(state.pattern[track][index])hit(track);});$('sequencer').append(button);}});$('tempo').value=state.tempo;$('bpm').textContent=state.tempo;}
+function tick(){if(!playing)return;document.querySelectorAll('.step').forEach(button=>button.classList.toggle('current',Number(button.dataset.step)===step));state.pattern.forEach((row,track)=>{if(row[step])hit(track);});step=(step+1)%8;timer=setTimeout(tick,60000/state.tempo/2);}
+function stopEngine(){$('audio-status').textContent='ENGINE STOPPED. PATTERN SAVED LOCALLY.';playing=false;clearTimeout(timer);$('play').textContent='▶ START ENGINE';$('play').setAttribute('aria-pressed','false');document.querySelectorAll('.step').forEach(button=>button.classList.remove('current'));}
+let starting=false;
+$('play').addEventListener('click',async()=>{if(playing){stopEngine();return;}if(starting)return;starting=true;try{if(!await enableAudio())return;playing=true;step=0;$('play').textContent='■ STOP ENGINE';$('play').setAttribute('aria-pressed','true');$('audio-status').textContent='ENGINE RUNNING. PATTERN SAVED LOCALLY.';tick();}finally{starting=false;}});
+$('sound').addEventListener('click',async()=>{if(soundEnabled){soundEnabled=false;stopEngine();if(audio)await audio.suspend();$('sound').textContent='SOUND OFF ↗';$('sound').setAttribute('aria-pressed','false');}else await enableAudio();});
+$('tempo').addEventListener('input',()=>{state.tempo=Number($('tempo').value);$('bpm').textContent=state.tempo;save();});
+$('mutate').addEventListener('click',()=>{state.pattern=state.pattern.map((row,track)=>row.map(()=>Math.random()<[.35,.25,.65][track]));save();renderPattern();});
+$('clear-pattern').addEventListener('click',()=>{state.pattern=Array.from({length:3},()=>Array(8).fill(false));save();renderPattern();});
+$('export').addEventListener('click',()=>{const url=URL.createObjectURL(new Blob([JSON.stringify(state,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download=`dead-air-${new Date().toISOString().slice(0,10)}.json`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
+$('import-button').addEventListener('click',()=>$('import').click());
+$('import').addEventListener('change',async event=>{const file=event.target.files[0];if(!file)return;try{if(file.size>2000000)throw Error('Too large');const data=JSON.parse(await file.text());let incoming;if(data.version===1){const legacy=validateLegacy(data);incoming=fresh();incoming.legacy=legacy;incoming.note=legacy.note;}else incoming=validate(data);if(!confirm('Replace this browser’s current saves with this backup? Export first if you want to keep both.'))return;stopEngine();state=incoming;storageOK=true;const saved=save();$('note').value=state.note;renderPattern();renderArchive();scramble();$('save-status').textContent=saved?'BACKUP RESTORED':'NOT SAVED — EXPORT BEFORE LEAVING';$('data-status').textContent=saved?'Backup restored to local storage.':'Restored in memory only. Export before leaving.';toast('Records recovered.');}catch{$('data-status').textContent='Invalid backup. Current records were not changed.';}finally{event.target.value='';}});
+renderArchive();renderPattern();scramble();if(!reduceMotion)frame=requestAnimationFrame(animate);
