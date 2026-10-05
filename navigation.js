@@ -1,6 +1,9 @@
 'use strict';
 // Hashes make every tool linkable and let native browser history handle back/forward.
 const channelRoutes = {
+  today: {view:'today',part:'drop',name:'00 / DEAD DROP'},
+  drop: {view:'today',part:'drop',name:'00 / DEAD DROP'},
+  releases: {view:'today',part:'releases',name:'00 / RELEASE ARCHIVE'},
   drift: {view:'drift',name:'01 / DRIFT'},
   case: {view:'case',name:'02 / CASE FILE'},
   tools: {view:'tools',part:'notes',name:'03 / SCRATCHPAD'},
@@ -17,8 +20,9 @@ const channelRoutes = {
 let activeChannel;
 function selectChannel({focus=false}={}) {
   const hash=location.hash.slice(1);
-  const route=Object.hasOwn(channelRoutes,hash)?channelRoutes[hash]:channelRoutes.drift;
+  const route=Object.hasOwn(channelRoutes,hash)?channelRoutes[hash]:channelRoutes.today;
   document.querySelectorAll('[data-view]').forEach(panel=>{panel.hidden=panel.dataset.view!==route.view;});
+  ['drop','releases'].forEach(id=>{$(id).hidden=route.view!=='today'||route.part!==id;});
   ['notes','focus','decoder'].forEach(id=>{$(id).hidden=route.view!=='tools'||route.part!==id;});
   ['latest','receiver','drum','archive'].forEach(id=>{$(id).hidden=route.view!=='lab'||route.part!==id;});
   document.querySelectorAll('[data-view-link]').forEach(link=>{
@@ -29,6 +33,7 @@ function selectChannel({focus=false}={}) {
     if(link.dataset.subview===route.part)link.setAttribute('aria-current','page');
     else link.removeAttribute('aria-current');
   });
+  document.body.dataset.channel=route.view;
   $('view-name').textContent=route.name;
   document.title='Dead Air / '+route.name.split(' / ')[1];
   if(route.part!=='drum'&&playing)stopEngine();

@@ -7,7 +7,7 @@ const {show}=require('./helpers.cjs');
  page.on('pageerror',e=>errors.push(e.message));
  const legacy={version:1,note:'survivor log',moods:{'2026-10-04':'electric'},waterings:['2026-10-04'],adventures:['2026-10-04']};
  await page.addInitScript(data=>{if(!localStorage.getItem('pocket-cabinet-v1'))localStorage.setItem('pocket-cabinet-v1',JSON.stringify(data));},legacy);
- await page.goto('http://127.0.0.1:8000');await show(page,'latest');
+ await page.goto('http://127.0.0.1:8000/#drift');await show(page,'latest');
  assert.equal(await page.locator('#note').inputValue(),'survivor log');
  const initialPrint=await page.locator('#print').evaluate(el=>el.toDataURL());await page.reload();await show(page,'latest');assert.equal(await page.locator('#print').evaluate(el=>el.toDataURL()),initialPrint);
  await page.locator('#new-print').click();const changedPrint=await page.locator('#print').evaluate(el=>el.toDataURL());assert.notEqual(changedPrint,initialPrint);await page.reload();await show(page,'latest');assert.equal(await page.locator('#print').evaluate(el=>el.toDataURL()),changedPrint);

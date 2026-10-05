@@ -7,7 +7,7 @@ const {show}=require('./helpers.cjs');
  page.on('pageerror',e=>errors.push(e.message));
  await context.route('**/*',route=>route.request().url().startsWith('http://127.0.0.1:8000')?route.continue():route.fulfill({status:200,body:'External navigation fixture'}));
  await page.clock.install({time:new Date('2026-10-05T09:00:00Z')});
- await page.goto('http://127.0.0.1:8000');
+ await page.goto('http://127.0.0.1:8000/#drift');
  assert.equal(await page.locator('.map-node').count(),12);
  await page.getByRole('button',{name:'Select route 12: Earth Nullschool',exact:true}).click();assert.equal(await page.locator('#route-title').textContent(),'Earth Nullschool');assert.equal(await page.locator('#map-node-id').textContent(),'012');
  assert.equal(await page.locator('#selected-route-ring').getAttribute('cx'),'615');

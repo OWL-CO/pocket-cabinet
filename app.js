@@ -10,12 +10,28 @@ function validateHub(hub) {
  if(!hub||!Number.isInteger(hub.current)||hub.current<0||hub.current>=12||!validIds(hub.bookmarks)||!validIds(hub.seen)||typeof hub.solved!=='boolean'||!Array.isArray(hub.tasks)||hub.tasks.length>100||!hub.tasks.every(task=>task&&typeof task.text==='string'&&task.text.length<=140&&typeof task.done==='boolean')||![300,1500].includes(hub.timerDuration)||!Number.isInteger(hub.timerRemaining)||hub.timerRemaining<0||hub.timerRemaining>1500||!(hub.timerEnd===null||(Number.isFinite(hub.timerEnd)&&hub.timerEnd>=0))) throw Error('Invalid relay records');
  return {current:hub.current,bookmarks:[...new Set(hub.bookmarks)],seen:[...new Set(hub.seen)],solved:hub.solved,tasks:hub.tasks.map(task=>({text:task.text,done:task.done})),timerEnd:hub.timerEnd,timerRemaining:hub.timerRemaining,timerDuration:hub.timerDuration};
 }
-const fresh = () => ({version:2,note:'',pattern:defaultPattern(),tempo:112,finds:[],legacy:null,artSeed:random(1000000),hub:freshHub()});
+const freshDrop = () => ({mission:0,run:null,records:[null,null,null]});
+function validateDrop(data){
+ if(data===undefined)return freshDrop();
+ if(!data||!Number.isInteger(data.mission)||data.mission<0||data.mission>2||!Array.isArray(data.records)||data.records.length!==3||!data.records.every((score,id)=>score===null||(Number.isInteger(score)&&score>0&&score<=DeadDrop.missions[id].limit)))throw Error('Invalid courier records');
+ if(data.mission>0&&data.records[data.mission-1]===null)throw Error('Locked contract');
+ if((data.records[1]!==null&&data.records[0]===null)||(data.records[2]!==null&&data.records[1]===null))throw Error('Invalid contract sequence');
+ let run=null;
+ if(data.run!==null){
+  const value=data.run,mission=DeadDrop.missions[data.mission];
+  if(!value||!Number.isInteger(value.position)||value.position<0||value.position>=36||mission.walls.includes(value.position)||!Number.isInteger(value.turn)||value.turn<0||value.turn>mission.limit||typeof value.packet!=='boolean'||!['active','won','lost'].includes(value.status))throw Error('Invalid courier run');
+  if(value.status==='won'&&(!value.packet||value.position!==mission.exit||value.turn===0))throw Error('Invalid delivery');
+  if(value.status==='active'&&value.turn>=mission.limit)throw Error('Expired run');
+  run={position:value.position,turn:value.turn,packet:value.packet,status:value.status};
+ }
+ return {mission:data.mission,run,records:[...data.records]};
+}
+const fresh = () => ({version:2,note:'',pattern:defaultPattern(),tempo:112,finds:[],legacy:null,artSeed:random(1000000),hub:freshHub(),deadDrop:freshDrop()});
 function validate(data) {
   if (!data || data.version!==2 || typeof data.note!=='string' || data.note.length>20000 || !Array.isArray(data.pattern) || data.pattern.length!==3 || !data.pattern.every(row=>Array.isArray(row)&&row.length===8&&row.every(cell=>typeof cell==='boolean')) || !Number.isInteger(data.tempo)||data.tempo<60||data.tempo>180 || !Array.isArray(data.finds) || data.finds.length>100 || !data.finds.every(find=>find&&Number.isInteger(find.id)&&find.id>=0&&find.id<stations.length&&typeof find.time==='string'&&find.time.length<=50&&Number.isFinite(Date.parse(find.time))&&typeof find.frequency==='number'&&find.frequency>=88&&find.frequency<=108)) throw Error('Invalid backup');
   if (data.artSeed!==undefined && (!Number.isInteger(data.artSeed)||data.artSeed<0||data.artSeed>999999)) throw Error('Invalid print seed');
   if (data.legacy!==null && data.legacy!==undefined) validateLegacy(data.legacy);
-  return {version:2,note:data.note,pattern:data.pattern.map(row=>[...row]),tempo:data.tempo,finds:data.finds.map(find=>({id:find.id,time:find.time,frequency:find.frequency})),legacy:data.legacy||null,artSeed:data.artSeed??random(1000000),hub:validateHub(data.hub)};
+  return {version:2,note:data.note,pattern:data.pattern.map(row=>[...row]),tempo:data.tempo,finds:data.finds.map(find=>({id:find.id,time:find.time,frequency:find.frequency})),legacy:data.legacy||null,artSeed:data.artSeed??random(1000000),hub:validateHub(data.hub),deadDrop:validateDrop(data.deadDrop)};
 }
 function validateLegacy(data) {
   const date=/^\d{4}-\d{2}-\d{2}$/;

@@ -1,6 +1,6 @@
 # DEAD AIR
 
-A personal industrial network console: web discovery, an ongoing mystery, useful tools, and an archive of previous experiments. Static HTML/CSS/JavaScript; no build step, dependencies, external fonts, or external services.
+A personal industrial network console for authored games, experiments, fiction, web discovery, and useful tools. Static HTML/CSS/JavaScript; no build step, dependencies, external fonts, or external services.
 
 ## Run
 
@@ -9,6 +9,16 @@ python3 -m http.server 8000 --bind 127.0.0.1
 ```
 
 GitHub Pages serves the repository root on `main`. Relative asset paths work under the repository subpath and custom domains.
+
+## Release 008 / Dead Drop
+
+The root URL now opens **Dead Drop**, a short tactical courier game with three authored contracts and three endings. Move through a 6 × 6 city, collect a parcel, and reach its antenna. The orange lane forecasts the next surveillance sweep; blue cover protects you. Walls block movement without spending a turn. Every move or wait advances the sweep. Keyboard arrows/WASD and touch controls work; there is no reaction timer.
+
+Runs save after every move. Completing a contract unlocks the next, keeps its receipt, and records the best turn count. The additive `deadDrop` field participates in validated version 2 backups; older saves initialize empty courier records. `drop-engine.js` contains the pure rules and the three fixed maps. `releases.js` handles the interface and archive.
+
+**New** contains the latest release and an archive of six existing works, with saved delivery and mystery progress. Direct links `#drop` and `#releases` work with browser history. Existing channels and records remain available. On phones, accepting a contract collapses its brief to keep the map and movement buttons together.
+
+[RELEASES.md](RELEASES.md) records the authoring direction for future additions: varied forms, concrete writing, persistent progress, and real releases rather than calendar rotation. Daily production is not automated.
 
 ## Release 007 / Channels
 
@@ -49,7 +59,7 @@ The waveform supports reduced-motion preferences. Controls support touch and key
 
 ## Persistence
 
-`dead-air-v2` stores notes, patterns, tempo, recovered transmissions, the current print seed, and a preserved copy of legacy records. The original `pocket-cabinet-v1` key is never changed. Old notes migrate into the new editor. Old moods, garden waterings, and adventures remain available in exported backups. Both version 1 and version 2 backups can be imported; imports validate before asking to replace current data.
+`dead-air-v2` stores notes, patterns, tempo, recovered transmissions, the current print seed, relay records, courier progress, and a preserved copy of legacy records. The original `pocket-cabinet-v1` key is never changed. Old notes migrate into the new editor. Old moods, garden waterings, and adventures remain available in exported backups. Both version 1 and version 2 backups can be imported; imports validate before asking to replace current data.
 
 Saves belong to the browser and origin, with no authentication or cross-device sync. Export before clearing browser data or changing domains. Storage failures are reported; in-memory data can still be exported.
 
@@ -59,6 +69,9 @@ Saves belong to the browser and origin, with no authentication or cross-device s
 node --check app.js
 node --check hub.js
 node --check navigation.js
+node --check drop-engine.js
+node --check releases.js
+node tests/drop-rules.cjs
 git diff --check
 ```
 
@@ -68,11 +81,12 @@ With the local server running, the prepared cloud runtime provides Playwright an
 node tests/navigation.cjs
 node tests/relay.cjs
 node tests/legacy.cjs
+node tests/releases.cjs
 ```
 
 The browser defaults to `/usr/bin/chromium`; set `CHROMIUM_PATH` for another installed executable. Outside this environment, install Playwright separately to run these checks. Tests use disposable contexts and write screenshots under `/tmp`. External navigation uses a controlled fixture; availability of linked websites is not validated.
 
-Browser smoke validation covers one-visible-view navigation, deep links and browser history, persistent draft text, sticky mobile navigation, timers across views, and  route filtering, bookmarks and controlled external navigation, puzzle resolution, Unicode conversion, task persistence, timer pause/reload/completion using a simulated clock, restored relay records, deterministic image generation, saved compositions, PNG download, legacy migration, frequency capture, notes/patterns/tempo/archive across reloads, audio start/mute, backup restoration, invalid backup rejection, blocked storage, reduced motion, and 320/390/768px layouts. Use an isolated browser context so test data cannot affect personal saves.
+Browser smoke validation covers one-visible-view navigation, deep links and browser history, persistent draft text, sticky mobile navigation, timers across views, route filtering, bookmarks and controlled external navigation, puzzle resolution, Unicode conversion, task persistence, timer pause/reload/completion using a simulated clock, restored relay records, deterministic image generation, saved compositions, PNG download, legacy migration, frequency capture, notes/patterns/tempo/archive across reloads, audio start/mute, backup restoration, invalid backup rejection, blocked storage, reduced motion, all three courier endings, saved runs and best scores, and 320/390/768px layouts. Pure-rule checks search each map for a successful delivery and verify surveillance, cover, walls, timeouts, and the parcel requirement. Use an isolated browser context so test data cannot affect personal saves.
 
 ## Future updates
 

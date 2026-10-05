@@ -7,7 +7,7 @@ const {show}=require('./helpers.cjs');
  page.on('pageerror',e=>errors.push(e.message));
  await page.clock.install({time:new Date('2026-10-05T09:00:00Z')});
  await page.goto('http://127.0.0.1:8000');
- assert.equal(await page.locator('[data-view]:visible').count(),1);assert.equal(await page.locator('#view-drift').isVisible(),true);
+ assert.equal(await page.locator('#drop').isVisible(),true);await show(page,'drift');assert.equal(await page.locator('[data-view]:visible').count(),1);assert.equal(await page.locator('#view-drift').isVisible(),true);
  assert.equal(await page.locator('#case').isVisible(),false);assert.equal(await page.locator('#notes').isVisible(),false);
  assert.equal(await page.locator('[data-view-link="drift"]').getAttribute('aria-current'),'page');
  assert.equal(await page.evaluate(()=>document.documentElement.scrollHeight<=innerHeight),true,'desktop Drift fits the viewport');
@@ -27,7 +27,7 @@ const {show}=require('./helpers.cjs');
  await page.screenshot({path:'/tmp/channels-desktop.png',fullPage:true});
  for(const width of [320,390,768]){
   await page.setViewportSize({width,height:844});
-  for(const hash of ['drift','case','notes','focus','decoder','latest','receiver','drum','archive','memory']){
+  for(const hash of ['drop','releases','drift','case','notes','focus','decoder','latest','receiver','drum','archive','memory']){
    await show(page,hash);assert.equal(await page.locator('[data-view]:visible').count(),1);
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`${hash}: overflow at ${width}`);
   }
@@ -39,6 +39,6 @@ const {show}=require('./helpers.cjs');
  await page.locator('[data-view-link="drift"]').click();await page.locator('#drift-next').waitFor({state:'visible'});assert.equal(await page.evaluate(()=>scrollY),0);
  await page.setViewportSize({width:390,height:844});await page.screenshot({path:'/tmp/channels-mobile.png',fullPage:true});
  const deep=await context.newPage();await deep.goto('http://127.0.0.1:8000/#decoder');assert.equal(await deep.locator('#decoder').isVisible(),true);assert.equal(await deep.locator('#drift').isVisible(),false);
- await deep.goto('http://127.0.0.1:8000/#unknown');assert.equal(await deep.locator('#drift').isVisible(),true);
+ await deep.goto('http://127.0.0.1:8000/#unknown');assert.equal(await deep.locator('#drop').isVisible(),true);
  assert.deepEqual(errors,[]);console.log('PASS: one visible channel, viewport-fit desktop Drift, direct tool links, preserved draft text, browser back/forward, deep links, timer across channels, audio stops on exit, all views at 320/390/768px, sticky mobile navigation, no JS errors.');await browser.close();
 })().catch(e=>{console.error(e);process.exit(1)});
