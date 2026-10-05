@@ -10,6 +10,10 @@ python3 -m http.server 8000 --bind 127.0.0.1
 
 GitHub Pages serves the repository root on `main`. Relative asset paths work under the repository subpath and custom domains.
 
+## Release 007 / Channels
+
+Primary views are Drift, Case File, Utilities, Lab, and Memory. Only the selected view is shown. Desktop navigation stays in a sidebar; mobile navigation stays beneath the header. Utilities and Lab have individual tool selectors. Views use native URL hashes, so direct links, reloads, and browser Back/Forward work (for example `#decoder`, `#notes`, `#receiver`). DOM panels remain mounted: switching does not discard unfinished text. Running timers keep counting and show a header shortcut; leaving the drum view stops its audio. Storage failures remain visible across channels.
+
 ## Release 006 / Network Ghost
 
 An original industrial interface inspired by cinematic cyberpunk infrastructure: layered schematics, an isometric relay city, phosphor traces, and a dead-letter signal diagram. The topology is functional: twelve keyboard-accessible nodes preview discovery routes, show the selected connection, and indicate previously opened sites. Pin/open counts reflect local saves. On phones, nodes become a compact numbered grid. Trace and scan animations stop for reduced-motion preferences. The map is a schematic of the curated index, not a real-time network or location scan.
@@ -54,19 +58,21 @@ Saves belong to the browser and origin, with no authentication or cross-device s
 ```sh
 node --check app.js
 node --check hub.js
+node --check navigation.js
 git diff --check
 ```
 
 With the local server running, the prepared cloud runtime provides Playwright and Chromium for repeatable browser checks:
 
 ```sh
+node tests/navigation.cjs
 node tests/relay.cjs
 node tests/legacy.cjs
 ```
 
 The browser defaults to `/usr/bin/chromium`; set `CHROMIUM_PATH` for another installed executable. Outside this environment, install Playwright separately to run these checks. Tests use disposable contexts and write screenshots under `/tmp`. External navigation uses a controlled fixture; availability of linked websites is not validated.
 
-Browser smoke validation covers route filtering, bookmarks and controlled external navigation, puzzle resolution, Unicode conversion, task persistence, timer pause/reload/completion using a simulated clock, restored relay records, deterministic image generation, saved compositions, PNG download, legacy migration, frequency capture, notes/patterns/tempo/archive across reloads, audio start/mute, backup restoration, invalid backup rejection, blocked storage, reduced motion, and 320/390/768px layouts. Use an isolated browser context so test data cannot affect personal saves.
+Browser smoke validation covers one-visible-view navigation, deep links and browser history, persistent draft text, sticky mobile navigation, timers across views, and  route filtering, bookmarks and controlled external navigation, puzzle resolution, Unicode conversion, task persistence, timer pause/reload/completion using a simulated clock, restored relay records, deterministic image generation, saved compositions, PNG download, legacy migration, frequency capture, notes/patterns/tempo/archive across reloads, audio start/mute, backup restoration, invalid backup rejection, blocked storage, reduced motion, and 320/390/768px layouts. Use an isolated browser context so test data cannot affect personal saves.
 
 ## Future updates
 

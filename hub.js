@@ -89,6 +89,8 @@ function remaining(){return state.hub.timerEnd===null?state.hub.timerRemaining:M
 function renderTimer(){
  const seconds=remaining();
  if(state.hub.timerEnd!==null&&seconds===0){state.hub.timerEnd=null;state.hub.timerRemaining=0;save();}
+ $('focus-indicator').hidden=state.hub.timerEnd===null;
+ $('focus-indicator').textContent='FOCUS '+String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0');
  $('timer-clock').textContent=`${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`;
  const running=state.hub.timerEnd!==null;$('timer-toggle').textContent=running?'PAUSE':seconds===0?'START AGAIN':'START';
  const status=running?'Running. You can leave this tab.':seconds===0?'Session complete. Take a breath.':seconds<state.hub.timerDuration?'Paused.':'Ready when you are.';
@@ -100,5 +102,3 @@ $('timer-reset').addEventListener('click',()=>{state.hub.timerEnd=null;state.hub
 document.querySelectorAll('[data-minutes]').forEach(button=>button.addEventListener('click',()=>{state.hub.timerDuration=Number(button.dataset.minutes)*60;state.hub.timerRemaining=state.hub.timerDuration;state.hub.timerEnd=null;save();renderTimer();}));
 function renderHub(){renderRoute();renderCase();renderTasks();renderTimer();}
 document.addEventListener('relay-restored',renderHub);setInterval(renderTimer,1000);renderHub();
-document.querySelector('.rail a[href="#experiments"]').addEventListener('click',()=>{$('experiments').open=true;});
-$('experiments').addEventListener('toggle',()=>{if($('experiments').open)drawScope(0);});
